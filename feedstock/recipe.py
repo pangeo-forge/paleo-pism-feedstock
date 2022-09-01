@@ -15,17 +15,32 @@ def make_url(id):
 from pangeo_forge_recipes.patterns import FilePattern
 pattern = FilePattern(make_url, id_concat_dim)
 
-import numpy as np
-import time
-def add_id_as_dim_and_coord(ds, fname):
+import fsspec
+import pandas as pd
+of = fsspec.open("zip://geo_data/aggregated_data/pism1.0_paleo06_6000.csv::https://download.pangaea.de/dataset/940149/files/paleo_ensemble_geo_2022.zip")
+with of as f:
+    df = pd.read_csv(f,sep="\s", engine='python')
+
+
+def add_id_and_pars(ds, fname):
     import numpy as np
-    id_temp = np.array([fname[31:35]])
-    ds = ds.expand_dims("id").assign_coords(id=("id",id_temp))   
+    import time
+
+    id_str = fname[31:35]
+    id_num = np.array([id_str])
+    ds = ds.expand_dims("id").assign_coords(id=("id",id_num)) 
     
     wait_time = 1.0
     print(f"sleeping for {wait_time} s.")
-
     time.sleep(wait_time)
+
+    ds = ds.assign_coords({"par_esia":  ('id', [df.sia_e[df['ens_member'].str.contains(id_str)][0]] ), 
+                            "par_ppq":   ('id', [df.ppq[df['ens_member'].str.contains(id_str)][0]] ),
+                            "par_prec":  ('id', [df.prec[df['ens_member'].str.contains(id_str)][0]] ),
+                            "par_visc":  ('id', [df.visc[df['ens_member'].str.contains(id_str)][0]])
+                            } 
+                           )
+
     return ds
 
 
@@ -33,5 +48,5 @@ def add_id_as_dim_and_coord(ds, fname):
 from pangeo_forge_recipes.recipes import XarrayZarrRecipe
 recipe = XarrayZarrRecipe(pattern, 
                           inputs_per_chunk=1,
-                          process_input=add_id_as_dim_and_coord,
+                          process_input=add_id_and_pars,
                           cache_inputs = 'False')    # one per chunk because each nc is ~210 MB
