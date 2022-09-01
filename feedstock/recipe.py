@@ -1,4 +1,4 @@
-# We will concatanate over the ensemble number (as a first attempt)
+# We will concatenate over the ensemble number (as a first attempt)
 
 # create identification numbers 
 ids = list(range(6000,6256))
@@ -16,10 +16,16 @@ from pangeo_forge_recipes.patterns import FilePattern
 pattern = FilePattern(make_url, id_concat_dim)
 
 import numpy as np
-
+import time
 def add_id_as_dim_and_coord(ds, fname):
+    import numpy as np
     id_temp = np.array([fname[31:35]])
     ds = ds.expand_dims("id").assign_coords(id=("id",id_temp))   
+    
+    wait_time = 1.0
+    print(f"sleeping for {wait_time} s.")
+
+    time.sleep(wait_time)
     return ds
 
 
@@ -27,4 +33,5 @@ def add_id_as_dim_and_coord(ds, fname):
 from pangeo_forge_recipes.recipes import XarrayZarrRecipe
 recipe = XarrayZarrRecipe(pattern, 
                           inputs_per_chunk=1,
-                          process_input=add_id_as_dim_and_coord)    # one per chunk because each nc is ~210 MB
+                          process_input=add_id_as_dim_and_coord,
+                          cache_inputs = 'False')    # one per chunk because each nc is ~210 MB
